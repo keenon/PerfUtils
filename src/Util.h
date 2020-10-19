@@ -16,7 +16,6 @@
 #ifndef PERFUTIL_UTIL_H
 #define PERFUTIL_UTIL_H
 
-#include <asm/unistd.h>
 #include <assert.h>
 #include <sched.h>
 #include <stdint.h>
@@ -34,6 +33,38 @@
 
 #include <mmintrin.h>
 #include <xmmintrin.h>
+
+#ifdef __APPLE__
+#include <mach/thread_policy.h>
+#include <mach/task_info.h>
+#include <mach/thread_act.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <pthread.h>
+
+// Credit to http://www.hybridkernel.com/2015/01/18/binding_threads_to_cores_osx.html
+
+#define SYSCTL_CORE_COUNT   "machdep.cpu.core_count"
+
+typedef struct cpu_set {
+  uint32_t    count;
+} cpu_set_t;
+
+static inline void
+CPU_ZERO(cpu_set_t *cs) { cs->count = 0; }
+
+static inline void
+CPU_SET(int num, cpu_set_t *cs) { cs->count |= (1 << num); }
+
+static inline int
+CPU_ISSET(int num, cpu_set_t *cs) { return (cs->count & (1 << num)); }
+
+int sched_getaffinity(pid_t pid, size_t cpu_size, cpu_set_t *cpu_set);
+int sched_setaffinity(pthread_t thread, size_t cpu_size,
+                           cpu_set_t *cpu_set);
+#else
+#include <asm/unistd.h>
+#endif
 
 namespace PerfUtils {
 
@@ -109,7 +140,11 @@ rdpmc(int ecx) {
  */
 static pid_t FORCE_INLINE
 gettid() {
+#ifdef __APPLE__
+    return static_cast<pid_t>(syscall(SYS_gettid));
+#else
     return static_cast<pid_t>(syscall(__NR_gettid));
+#endif
 }
 
 /**
