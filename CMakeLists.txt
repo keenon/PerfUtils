@@ -2,6 +2,9 @@ cmake_minimum_required (VERSION 3.11)
 
 project(PerfUtils VERSION 0.1.0 LANGUAGES CXX C)
 
+# Use the -fPIC flag
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 ################################################################################
 ## Dependencies ################################################################
 ################################################################################
